@@ -8,12 +8,6 @@
                     Personal Information
                 </h4>
 
-                @if (session('status'))
-                    <div class="mb-4 rounded-lg border border-success-500 bg-success-50 px-4 py-3 text-sm text-success-600 dark:bg-success-500/10">
-                        {{ session('status') }}
-                    </div>
-                @endif
-
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
                     <div>
                         <p class="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">Name</p>

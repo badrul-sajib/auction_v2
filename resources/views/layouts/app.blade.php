@@ -111,6 +111,10 @@
     <x-common.preloader/>
     {{-- preloader end --}}
 
+    @if (session('status'))
+        <script>window.__flash = { type: 'success', message: @json(session('status')) };</script>
+    @endif
+
     <div class="min-h-screen xl:flex">
         @include('layouts.backdrop')
         @include('layouts.sidebar')

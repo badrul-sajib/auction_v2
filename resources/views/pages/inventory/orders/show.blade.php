@@ -103,7 +103,11 @@
                     @endif
                     @if ($order->agent_id)
                         <div>
-                            <dt class="text-xs uppercase text-gray-400">Admin / Rider ID</dt>
+                            <dt class="text-xs uppercase text-gray-400">Collected by</dt>
+                            <dd class="text-sm font-medium text-gray-800 dark:text-white/90">{{ ucfirst($order->agent_type ?? 'Agent') }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase text-gray-400">{{ ucfirst($order->agent_type ?? 'Agent') }} ID</dt>
                             <dd class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $order->agent_id }}</dd>
                         </div>
                     @endif

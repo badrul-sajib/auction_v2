@@ -46,7 +46,7 @@
                                 @if ($payment->transaction_number)
                                     <span class="text-gray-500 dark:text-gray-400">TxN:</span> {{ $payment->transaction_number }}
                                 @elseif ($payment->agent_id)
-                                    <span class="text-gray-500 dark:text-gray-400">Agent:</span> {{ $payment->agent_id }}
+                                    <span class="text-gray-500 dark:text-gray-400">{{ ucfirst($payment->agent_type ?? 'Agent') }}:</span> {{ $payment->agent_id }}
                                 @else
                                     —
                                 @endif

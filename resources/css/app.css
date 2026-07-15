@@ -13,6 +13,9 @@
 
 [x-cloak] { display: none !important; }
 
+/* Keep SweetAlert toasts above the sidebar/header (which use z-99999) */
+.swal2-container { z-index: 100001 !important; }
+
 @theme {
   --font-*: initial;
   --font-outfit: Outfit, sans-serif;

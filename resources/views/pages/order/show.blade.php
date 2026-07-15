@@ -33,6 +33,7 @@
                         qty: {{ (int) old('quantity', 1) }},
                         unit: {{ $product->currentPrice() }},
                         method: '{{ old('payment_method_id') }}',
+                        agentType: '{{ old('agent_type', 'admin') }}',
                         methods: {{ Illuminate\Support\Js::from($paymentMethods->mapWithKeys(fn ($m) => [$m->id => ['requires_transaction' => $m->requires_transaction, 'requires_agent' => $m->requires_agent, 'instructions' => $m->instructions]])) }},
                         get selected() { return this.methods[this.method] || null; }
                     }">
@@ -87,9 +88,24 @@
                         </div>
 
                         <div x-show="selected && selected.requires_agent" x-cloak class="mt-3">
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Admin / Rider ID</label>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Collected by</label>
+                            <div class="mb-3 flex gap-3">
+                                <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700"
+                                    :class="agentType === 'admin' ? 'border-brand-500 ring-2 ring-brand-500/20' : ''">
+                                    <input type="radio" name="agent_type" value="admin" x-model="agentType" class="text-brand-500" />
+                                    Admin
+                                </label>
+                                <label class="flex flex-1 cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm dark:border-gray-700"
+                                    :class="agentType === 'rider' ? 'border-brand-500 ring-2 ring-brand-500/20' : ''">
+                                    <input type="radio" name="agent_type" value="rider" x-model="agentType" class="text-brand-500" />
+                                    Rider
+                                </label>
+                            </div>
+
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400"
+                                x-text="(agentType === 'rider' ? 'Rider' : 'Admin') + ' ID'"></label>
                             <input type="text" name="agent_id" value="{{ old('agent_id') }}"
-                                placeholder="ID of the person collecting payment"
+                                :placeholder="'ID of the ' + (agentType === 'rider' ? 'rider' : 'admin') + ' collecting payment'"
                                 class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                         </div>
                     </div>

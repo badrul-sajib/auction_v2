@@ -43,7 +43,7 @@
                                 @if ($order->transaction_number)
                                     <span class="block text-xs text-gray-400">TxN: {{ $order->transaction_number }}</span>
                                 @elseif ($order->agent_id)
-                                    <span class="block text-xs text-gray-400">Agent: {{ $order->agent_id }}</span>
+                                    <span class="block text-xs text-gray-400">{{ ucfirst($order->agent_type ?? 'Agent') }}: {{ $order->agent_id }}</span>
                                 @endif
                             </td>
                             <td class="px-5 py-4">

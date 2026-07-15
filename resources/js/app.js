@@ -1,6 +1,7 @@
 import './bootstrap';
 import Alpine from 'alpinejs';
 import ApexCharts from 'apexcharts';
+import Swal from 'sweetalert2';
 
 // flatpickr
 import flatpickr from 'flatpickr';
@@ -14,6 +15,31 @@ window.Alpine = Alpine;
 window.ApexCharts = ApexCharts;
 window.flatpickr = flatpickr;
 window.FullCalendar = Calendar;
+window.Swal = Swal;
+
+// Fire a SweetAlert toast for any flashed message set on window.__flash
+function showFlashToast() {
+    if (!window.__flash || !window.__flash.message) {
+        return;
+    }
+    const { type = 'success', message } = window.__flash;
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: type,
+        title: message,
+        showConfirmButton: false,
+        timer: 3500,
+        timerProgressBar: true,
+    });
+    window.__flash = null;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', showFlashToast);
+} else {
+    showFlashToast();
+}
 
 Alpine.start();
 
