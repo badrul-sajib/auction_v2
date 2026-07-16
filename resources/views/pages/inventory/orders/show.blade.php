@@ -20,10 +20,12 @@
                     'border-warning-300 text-warning-600' => $order->status === 'pending',
                     'border-success-300 text-success-600' => $order->status === 'confirmed',
                     'border-error-300 text-error-600' => $order->status === 'cancelled',
+                    'border-brand-300 text-brand-600' => $order->status === 'delivered',
                 ])>
                 <option value="pending" @selected($order->status === 'pending')>Pending</option>
                 <option value="confirmed" @selected($order->status === 'confirmed')>Confirmed</option>
                 <option value="cancelled" @selected($order->status === 'cancelled')>Cancelled</option>
+                <option value="delivered" @selected($order->status === 'delivered')>Delivered</option>
             </select>
         </form>
     </div>
@@ -132,6 +134,7 @@
                                 'bg-warning-50 text-warning-600 dark:bg-warning-500/15' => $order->status === 'pending',
                                 'bg-success-50 text-success-600 dark:bg-success-500/15' => $order->status === 'confirmed',
                                 'bg-error-50 text-error-600 dark:bg-error-500/15' => $order->status === 'cancelled',
+                                'bg-brand-50 text-brand-600 dark:bg-brand-500/15' => $order->status === 'delivered',
                             ])>{{ ucfirst($order->status) }}</span>
                         </dd>
                     </div>
@@ -145,7 +148,7 @@
                     </div>
                     <div class="flex justify-between">
                         <dt class="text-sm text-gray-500 dark:text-gray-400">Source</dt>
-                        <dd class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $order->orderLink ? 'Order link' : 'Manual' }}</dd>
+                        <dd class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $order->auction ? 'Auction' : 'Manual' }}</dd>
                     </div>
                 </dl>
             </div>

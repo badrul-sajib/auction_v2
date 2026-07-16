@@ -3,8 +3,10 @@ export const initChartTwo = () => {
     const chartElement = document.querySelector('#chartTwo');
 
     if (chartElement) {
+        const targetPercent = typeof window.__targetPercent === 'number' ? window.__targetPercent : 75.55;
+
         const chartTwoOptions = {
-            series: [75.55],
+            series: [targetPercent],
             colors: ["#465FFF"],
             chart: {
                 fontFamily: "Outfit, sans-serif",

@@ -4,25 +4,6 @@
     <x-common.page-breadcrumb pageTitle="Products" />
     @include('pages.inventory.partials.flash')
 
-    @if (session('order_link'))
-        <div x-data="{ link: '{{ session('order_link') }}', copied: false }"
-            class="mb-5 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-500/30 dark:bg-brand-500/10">
-            <p class="mb-2 text-sm font-medium text-brand-700 dark:text-brand-300">Order link ready — share it with your customer:</p>
-            <div class="flex items-center gap-2">
-                <input type="text" readonly :value="link" x-ref="linkInput"
-                    class="h-10 flex-1 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200" />
-                <button type="button"
-                    @click="navigator.clipboard.writeText(link); copied = true; setTimeout(() => copied = false, 2000)"
-                    class="h-10 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white hover:bg-brand-600">
-                    <span x-show="!copied">Copy</span>
-                    <span x-show="copied">Copied!</span>
-                </button>
-                <a :href="link" target="_blank"
-                    class="h-10 rounded-lg border border-gray-300 px-4 text-sm font-medium leading-10 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Open</a>
-            </div>
-        </div>
-    @endif
-
     <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
             <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">All Products</h3>
@@ -43,7 +24,7 @@
                         <th class="px-5 py-3 text-right">Price</th>
                         <th class="px-5 py-3 text-right">Cost</th>
                         <th class="px-5 py-3 text-right">In Stock</th>
-                        <th class="px-5 py-3 text-center">Order Link</th>
+                        <th class="px-5 py-3 text-center">Auction</th>
                         <th class="px-5 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -83,48 +64,12 @@
                                     'bg-error-50 text-error-600 dark:bg-error-500/15' => $qty <= 0,
                                 ])>{{ $qty }}</span>
                             </td>
-                            <td class="px-5 py-4 text-center" x-data="{ open: false, validity: '7' }">
-                                <button type="button" @click="open = true"
+                            <td class="px-5 py-4 text-center">
+                                <a href="{{ route('inventory.auctions.index', $product) }}"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 dark:border-brand-500/40 dark:hover:bg-brand-500/10">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5m6.656-1.828a4 4 0 000-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5" /></svg>
-                                    Create
-                                </button>
-
-                                <!-- Modal -->
-                                <div x-show="open" x-cloak @keydown.escape.window="open = false"
-                                    class="fixed inset-0 z-99999 flex items-center justify-center bg-gray-900/50 p-4">
-                                    <div @click.outside="open = false"
-                                        class="w-full max-w-md rounded-2xl bg-white p-6 text-left dark:bg-gray-900">
-                                        <h4 class="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">Create Order Link</h4>
-                                        <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">{{ $product->name }}</p>
-
-                                        <form method="POST" action="{{ route('inventory.order-links.store', $product) }}">
-                                            @csrf
-                                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Link validity</label>
-                                            <select name="validity" x-model="validity"
-                                                class="mb-4 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                                <option value="1">Expires in 1 day</option>
-                                                <option value="7">Expires in 7 days</option>
-                                                <option value="30">Expires in 30 days</option>
-                                                <option value="never">Never expires</option>
-                                                <option value="custom">Custom date &amp; time…</option>
-                                            </select>
-
-                                            <div x-show="validity === 'custom'" class="mb-4">
-                                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Expiry date &amp; time</label>
-                                                <input type="datetime-local" name="expires_at"
-                                                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
-                                            </div>
-
-                                            <div class="flex justify-end gap-3">
-                                                <button type="button" @click="open = false"
-                                                    class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Cancel</button>
-                                                <button type="submit"
-                                                    class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Generate Link</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    View
+                                </a>
                             </td>
                             <td class="px-5 py-4">
                                 <div class="flex items-center justify-end gap-2">

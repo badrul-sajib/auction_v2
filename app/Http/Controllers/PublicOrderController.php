@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Auction;
 use App\Models\Order;
-use App\Models\OrderLink;
 use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -12,24 +12,24 @@ class PublicOrderController extends Controller
 {
     public function show(string $token)
     {
-        $link = OrderLink::with('product')->where('token', $token)->first();
+        $auction = Auction::with('product')->where('token', $token)->first();
 
-        if (! $link || ! $link->isValid()) {
+        if (! $auction || ! $auction->isValid()) {
             return response()->view('pages.order.invalid', [], 410);
         }
 
         return view('pages.order.show', [
-            'link' => $link,
-            'product' => $link->product,
+            'auction' => $auction,
+            'product' => $auction->product,
             'paymentMethods' => PaymentMethod::active()->get(),
         ]);
     }
 
     public function store(Request $request, string $token)
     {
-        $link = OrderLink::with('product')->where('token', $token)->first();
+        $auction = Auction::with('product')->where('token', $token)->first();
 
-        if (! $link || ! $link->isValid()) {
+        if (! $auction || ! $auction->isValid()) {
             return response()->view('pages.order.invalid', [], 410);
         }
 
@@ -43,6 +43,14 @@ class PublicOrderController extends Controller
             'agent_type' => ['nullable', 'in:admin,rider'],
             'agent_id' => ['nullable', 'string', 'max:100'],
         ]);
+
+        // Enforce the auction's remaining stock.
+        $remaining = $auction->remainingStock();
+        if ($remaining !== null && $data['quantity'] > $remaining) {
+            throw ValidationException::withMessages([
+                'quantity' => "Only {$remaining} unit(s) left in this auction.",
+            ]);
+        }
 
         $method = PaymentMethod::where('is_active', true)->findOrFail($data['payment_method_id']);
 
@@ -65,11 +73,11 @@ class PublicOrderController extends Controller
             }
         }
 
-        $unitPrice = $link->product->currentPrice();
+        $unitPrice = $auction->product->currentPrice();
 
         $order = Order::create([
-            'order_link_id' => $link->id,
-            'product_id' => $link->product_id,
+            'order_link_id' => $auction->id,
+            'product_id' => $auction->product_id,
             'customer_name' => $data['customer_name'],
             'customer_phone' => $data['customer_phone'],
             'customer_address' => $data['customer_address'] ?? null,
@@ -83,6 +91,6 @@ class PublicOrderController extends Controller
             'agent_id' => $method->requires_agent ? $data['agent_id'] : null,
         ]);
 
-        return view('pages.order.thankyou', ['order' => $order, 'product' => $link->product]);
+        return view('pages.order.thankyou', ['order' => $order, 'product' => $auction->product]);
     }
 }

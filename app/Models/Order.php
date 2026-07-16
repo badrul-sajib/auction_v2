@@ -11,6 +11,7 @@ class Order extends Model
         'order_link_id', 'product_id', 'customer_name', 'customer_phone',
         'customer_address', 'quantity', 'unit_price', 'total', 'status',
         'payment_method_id', 'transaction_number', 'agent_type', 'agent_id',
+        'withdrawal_id',
     ];
 
     protected $casts = [
@@ -23,13 +24,18 @@ class Order extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function orderLink(): BelongsTo
+    public function auction(): BelongsTo
     {
-        return $this->belongsTo(OrderLink::class);
+        return $this->belongsTo(Auction::class, 'order_link_id');
     }
 
     public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethod::class);
+    }
+
+    public function withdrawal(): BelongsTo
+    {
+        return $this->belongsTo(Withdrawal::class);
     }
 }

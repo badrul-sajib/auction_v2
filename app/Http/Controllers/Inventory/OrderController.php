@@ -7,6 +7,7 @@ use App\Models\Merchant;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -35,7 +36,7 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load(['product.category', 'product.merchant', 'paymentMethod', 'orderLink']);
+        $order->load(['product.category', 'product.merchant', 'paymentMethod', 'auction']);
 
         return view('pages.inventory.orders.show', compact('order'));
     }
@@ -43,10 +44,22 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status' => ['required', 'in:pending,confirmed,cancelled'],
+            'status' => ['required', 'in:pending,confirmed,cancelled,delivered'],
         ]);
 
-        $order->update($data);
+        $oldStatus = $order->status;
+        $newStatus = $data['status'];
+
+        DB::transaction(function () use ($order, $oldStatus, $newStatus) {
+            // Deduct on-hand stock when an order becomes delivered; restore it if moved back.
+            if ($newStatus === 'delivered' && $oldStatus !== 'delivered') {
+                $order->product?->reduceStock($order->quantity);
+            } elseif ($oldStatus === 'delivered' && $newStatus !== 'delivered') {
+                $order->product?->increaseStock($order->quantity);
+            }
+
+            $order->update(['status' => $newStatus]);
+        });
 
         return redirect()->route('inventory.orders.index')->with('status', 'Order status updated.');
     }

@@ -4,10 +4,14 @@ export const initChartOne = () => {
     const chartElement = document.querySelector('#chartOne');
     if (!chartElement) return;
 
+    const monthlyData = Array.isArray(window.__monthlySales) && window.__monthlySales.length === 12
+        ? window.__monthlySales
+        : [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112];
+
     const chartOneOptions = {
         series: [{
             name: "Sales",
-            data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
+            data: monthlyData,
         },],
         colors: ["#465fff"],
         chart: {

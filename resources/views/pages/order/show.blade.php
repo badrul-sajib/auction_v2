@@ -28,7 +28,7 @@
                 </div>
 
                 <!-- Order form -->
-                <form method="POST" action="{{ route('order.store', $link->token) }}" class="space-y-4 p-5"
+                <form method="POST" action="{{ route('order.store', $auction->token) }}" class="space-y-4 p-5"
                     x-data="{
                         qty: {{ (int) old('quantity', 1) }},
                         unit: {{ $product->currentPrice() }},
@@ -123,8 +123,12 @@
                 </form>
             </div>
 
-            @if ($link->expires_at)
-                <p class="mt-4 text-center text-xs text-gray-400">This order link is valid until {{ $link->expires_at->format('M j, Y g:i A') }}.</p>
+            @php $remaining = $auction->remainingStock(); @endphp
+            @if ($remaining !== null)
+                <p class="mt-4 text-center text-xs text-gray-400">{{ $remaining }} unit(s) left in this auction.</p>
+            @endif
+            @if ($auction->expires_at)
+                <p class="mt-1 text-center text-xs text-gray-400">Valid until {{ $auction->expires_at->format('M j, Y g:i A') }}.</p>
             @endif
         </div>
     </div>

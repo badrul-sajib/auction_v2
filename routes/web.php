@@ -10,10 +10,11 @@ use App\Http\Controllers\Inventory\WarehouseController;
 use App\Http\Controllers\Inventory\MerchantController;
 use App\Http\Controllers\Inventory\StockController;
 use App\Http\Controllers\Inventory\PurchaseController;
-use App\Http\Controllers\Inventory\OrderLinkController;
+use App\Http\Controllers\Inventory\AuctionController;
 use App\Http\Controllers\Inventory\OrderController;
 use App\Http\Controllers\Inventory\PaymentMethodController;
 use App\Http\Controllers\Inventory\PaymentController;
+use App\Http\Controllers\Inventory\WithdrawalController;
 use App\Http\Controllers\PublicOrderController;
 
 // public order pages (tokenized, no auth)
@@ -35,14 +36,22 @@ Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(functi
     Route::get('purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
 
-    Route::post('products/{product}/order-links', [OrderLinkController::class, 'store'])->name('order-links.store');
-    Route::delete('order-links/{orderLink}', [OrderLinkController::class, 'destroy'])->name('order-links.destroy');
+    Route::get('products/{product}/auctions', [AuctionController::class, 'index'])->name('auctions.index');
+    Route::get('products/{product}/auctions/create', [AuctionController::class, 'create'])->name('auctions.create');
+    Route::post('products/{product}/auctions', [AuctionController::class, 'store'])->name('auctions.store');
+    Route::get('auctions/{auction}', [AuctionController::class, 'show'])->name('auctions.show');
+    Route::patch('auctions/{auction}/toggle', [AuctionController::class, 'toggle'])->name('auctions.toggle');
+    Route::delete('auctions/{auction}', [AuctionController::class, 'destroy'])->name('auctions.destroy');
 
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
 
     Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+
+    Route::get('withdrawals', [WithdrawalController::class, 'index'])->name('withdrawals.index');
+    Route::post('withdrawals', [WithdrawalController::class, 'store'])->name('withdrawals.store');
+    Route::get('withdrawals/{withdrawal}/invoice', [WithdrawalController::class, 'invoice'])->name('withdrawals.invoice');
     Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 
     Route::get('adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
@@ -55,9 +64,7 @@ Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(functi
 });
 
 // dashboard pages
-Route::get('/', function () {
-    return view('pages.dashboard.ecommerce', ['title' => 'E-commerce Dashboard']);
-})->middleware('auth')->name('dashboard');
+Route::get('/', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
 // calender pages
 Route::get('/calendar', function () {
