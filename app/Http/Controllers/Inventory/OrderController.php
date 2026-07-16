@@ -13,9 +13,18 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $filters = $request->only(['product_id', 'merchant_id', 'status', 'date_from', 'date_to']);
+        $filters = $request->only(['search', 'product_id', 'merchant_id', 'status', 'date_from', 'date_to']);
 
         $orders = Order::with(['product.merchant', 'paymentMethod'])
+            ->when($filters['search'] ?? null, function ($q, $v) {
+                $term = ltrim(trim($v), '#');
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('customer_phone', 'like', '%' . $term . '%');
+                    if (ctype_digit($term)) {
+                        $sub->orWhere('id', (int) $term);
+                    }
+                });
+            })
             ->when($filters['product_id'] ?? null, fn ($q, $v) => $q->where('product_id', $v))
             ->when($filters['merchant_id'] ?? null, fn ($q, $v) =>
                 $q->whereHas('product', fn ($p) => $p->where('merchant_id', $v)))

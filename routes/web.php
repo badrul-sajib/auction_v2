@@ -25,6 +25,8 @@ use App\Http\Controllers\Inventory\StockTransferController;
 
 // inventory
 Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(function () {
+    Route::get('products/import/sample', [ProductController::class, 'sampleImport'])->name('products.import.sample');
+    Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
     Route::resource('products', ProductController::class)->except('show');
     Route::resource('categories', CategoryController::class)->except('show');
     Route::resource('warehouses', WarehouseController::class)->except('show');

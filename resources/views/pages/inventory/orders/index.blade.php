@@ -8,6 +8,13 @@
 
     <form method="GET" action="{{ route('inventory.orders.index') }}"
         class="mb-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-4">
+            <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Search</label>
+            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
+                placeholder="Order ID or phone number…"
+                class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+        </div>
+
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div>
                 <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Item</label>

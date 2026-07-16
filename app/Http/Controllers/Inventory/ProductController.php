@@ -115,6 +115,138 @@ class ProductController extends Controller
         return redirect()->route('inventory.products.index')->with('status', 'Product deleted.');
     }
 
+    public function sampleImport()
+    {
+        $rows = [
+            ['name', 'sku', 'category', 'merchant', 'price', 'offer_price', 'description', 'image'],
+            ['Wireless Mouse', 'WM-001', 'Electronics', 'Acme Traders', '1200', '999', 'Ergonomic wireless mouse', 'https://example.com/mouse.jpg'],
+            ['Basmati Rice 5kg', 'RICE-5', 'Dry Foods', 'Ghorer Bazar', '850', '', 'Premium aged basmati rice', ''],
+        ];
+
+        $handle = fopen('php://temp', 'r+');
+        foreach ($rows as $row) {
+            fputcsv($handle, $row, ',', '"', '');
+        }
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="products-import-sample.csv"',
+        ]);
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+        ]);
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if (! $handle) {
+            return back()->with('status', 'Could not read the uploaded file.');
+        }
+
+        $header = fgetcsv($handle, null, ',', '"', '');
+        $header = array_map(fn ($h) => strtolower(trim((string) $h)), $header ?: []);
+
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $line = 1;
+
+        DB::transaction(function () use ($handle, $header, &$created, &$updated, &$skipped, &$line) {
+            while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+                $line++;
+                $data = array_combine($header, array_pad($row, count($header), null));
+
+                $name = trim((string) ($data['name'] ?? ''));
+                $sku = trim((string) ($data['sku'] ?? ''));
+                $price = $data['price'] ?? null;
+
+                if ($name === '' || $sku === '' || ! is_numeric($price)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $offer = $data['offer_price'] ?? null;
+                $offer = is_numeric($offer) && (float) $offer < (float) $price ? (float) $offer : null;
+
+                $categoryId = filled($data['category'] ?? null)
+                    ? Category::firstOrCreate(['name' => trim($data['category'])])->id : null;
+                $merchantId = filled($data['merchant'] ?? null)
+                    ? Merchant::firstOrCreate(['name' => trim($data['merchant'])])->id : null;
+
+                $product = Product::firstOrNew(['sku' => $sku]);
+                $wasExisting = $product->exists;
+
+                $product->fill([
+                    'name' => $name,
+                    'price' => (float) $price,
+                    'offer_price' => $offer,
+                    'category_id' => $categoryId,
+                    'merchant_id' => $merchantId,
+                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+                ]);
+
+                // Optional image column: download from URL and store.
+                if (filled($data['image'] ?? null)) {
+                    if ($stored = $this->fetchImage(trim($data['image']))) {
+                        if ($product->image) {
+                            Storage::disk('public')->delete($product->image);
+                        }
+                        $product->image = $stored;
+                    }
+                }
+
+                $product->save();
+
+                $wasExisting ? $updated++ : $created++;
+            }
+        });
+
+        fclose($handle);
+
+        return redirect()->route('inventory.products.index')
+            ->with('status', "Import complete: {$created} added, {$updated} updated, {$skipped} skipped.");
+    }
+
+    /** Download an image URL and store it on the public disk; returns the path or null. */
+    private function fetchImage(string $url): ?string
+    {
+        if (! preg_match('#^https?://#i', $url)) {
+            return null;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(15)->get($url);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $mime = strtolower((string) $response->header('Content-Type'));
+        $ext = match (true) {
+            str_contains($mime, 'png') => 'png',
+            str_contains($mime, 'webp') => 'webp',
+            str_contains($mime, 'jpeg'), str_contains($mime, 'jpg') => 'jpg',
+            default => null,
+        };
+
+        if ($ext === null) {
+            return null;
+        }
+
+        $path = 'products/' . \Illuminate\Support\Str::random(40) . '.' . $ext;
+        \Illuminate\Support\Facades\Storage::disk('public')->put($path, $response->body());
+
+        return $path;
+    }
+
     private function validateData(Request $request, ?Product $product = null): array
     {
         return $request->validate([

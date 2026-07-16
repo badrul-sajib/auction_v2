@@ -12,7 +12,19 @@
                         @endif
                     </div>
                     <div>
-                        <h1 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $product->name }}</h1>
+                        @php
+                            // Use the auction's remaining stock if it's capped, otherwise the product's on-hand stock.
+                            $available = $auction->remainingStock() ?? $product->totalStock();
+                        @endphp
+                        <div class="flex items-start justify-between gap-2">
+                            <h1 class="text-lg font-semibold text-gray-800 dark:text-white/90">{{ $product->name }}</h1>
+                            <span @class([
+                                'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                'bg-success-50 text-success-600 dark:bg-success-500/15' => $available > 5,
+                                'bg-warning-50 text-warning-600 dark:bg-warning-500/15' => $available > 0 && $available <= 5,
+                                'bg-error-50 text-error-600 dark:bg-error-500/15' => $available <= 0,
+                            ])>{{ $available > 0 ? $available . ' available' : 'Sold out' }}</span>
+                        </div>
                         <div class="mt-1 flex items-center gap-2">
                             @if ($product->offer_price !== null)
                                 <span class="text-gray-400 line-through">{{ number_format($product->price, 2) }}</span>
@@ -63,7 +75,7 @@
                     </div>
                     <div>
                         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Quantity</label>
-                        <input type="number" name="quantity" min="1" x-model.number="qty" required
+                        <input type="number" name="quantity" min="1" @if ($available > 0) max="{{ $available }}" @endif x-model.number="qty" required
                             class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                     </div>
 
