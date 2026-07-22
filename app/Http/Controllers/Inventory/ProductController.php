@@ -118,9 +118,9 @@ class ProductController extends Controller
     public function sampleImport()
     {
         $rows = [
-            ['name', 'sku', 'category', 'merchant', 'price', 'offer_price', 'description', 'image'],
-            ['Wireless Mouse', 'WM-001', 'Electronics', 'Acme Traders', '1200', '999', 'Ergonomic wireless mouse', 'https://example.com/mouse.jpg'],
-            ['Basmati Rice 5kg', 'RICE-5', 'Dry Foods', 'Ghorer Bazar', '850', '', 'Premium aged basmati rice', ''],
+            ['name', 'sku', 'category', 'merchant', 'price', 'offer_price', 'description', 'image', 'opening_stock', 'warehouse'],
+            ['Wireless Mouse', 'WM-001', 'Electronics', 'Acme Traders', '1200', '999', 'Ergonomic wireless mouse', 'https://example.com/mouse.jpg', '50', 'Main Warehouse'],
+            ['Basmati Rice 5kg', 'RICE-5', 'Dry Foods', 'Ghorer Bazar', '850', '', 'Premium aged basmati rice', '', '100', 'Main Warehouse'],
         ];
 
         $handle = fopen('php://temp', 'r+');
@@ -137,7 +137,12 @@ class ProductController extends Controller
         ]);
     }
 
-    public function import(Request $request)
+    private const IMPORT_COLUMNS = [
+        'name', 'sku', 'category', 'merchant', 'price', 'offer_price', 'description', 'image', 'opening_stock', 'warehouse',
+    ];
+
+    /** Step 1: parse the uploaded CSV and show an editable preview. */
+    public function previewImport(Request $request)
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
@@ -151,81 +156,149 @@ class ProductController extends Controller
         $header = fgetcsv($handle, null, ',', '"', '');
         $header = array_map(fn ($h) => strtolower(trim((string) $h)), $header ?: []);
 
+        $rows = [];
+        while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+            if (count(array_filter($row, fn ($c) => trim((string) $c) !== '')) === 0) {
+                continue; // skip fully blank lines
+            }
+            $assoc = array_combine($header, array_pad($row, count($header), null));
+            $rows[] = collect(self::IMPORT_COLUMNS)
+                ->mapWithKeys(fn ($col) => [$col => trim((string) ($assoc[$col] ?? ''))])
+                ->all();
+        }
+        fclose($handle);
+
+        if (empty($rows)) {
+            return back()->with('status', 'No data rows found in the file.');
+        }
+
+        return view('pages.inventory.products.import-preview', [
+            'rows' => $rows,
+            'columns' => self::IMPORT_COLUMNS,
+            'options' => [
+                'category' => Category::orderBy('name')->pluck('name'),
+                'merchant' => Merchant::orderBy('name')->pluck('name'),
+                'warehouse' => Warehouse::orderBy('name')->pluck('name'),
+            ],
+        ]);
+    }
+
+    /** Step 2: import the (possibly edited) rows from the preview. */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'rows.*.image_file' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+        ]);
+
+        $rows = $request->input('rows', []);
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
-        $line = 1;
 
-        DB::transaction(function () use ($handle, $header, &$created, &$updated, &$skipped, &$line) {
-            while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
-                $line++;
-                $data = array_combine($header, array_pad($row, count($header), null));
-
-                $name = trim((string) ($data['name'] ?? ''));
-                $sku = trim((string) ($data['sku'] ?? ''));
-                $price = $data['price'] ?? null;
-
-                if ($name === '' || $sku === '' || ! is_numeric($price)) {
-                    $skipped++;
-                    continue;
-                }
-
-                $offer = $data['offer_price'] ?? null;
-                $offer = is_numeric($offer) && (float) $offer < (float) $price ? (float) $offer : null;
-
-                $categoryId = filled($data['category'] ?? null)
-                    ? Category::firstOrCreate(['name' => trim($data['category'])])->id : null;
-                $merchantId = filled($data['merchant'] ?? null)
-                    ? Merchant::firstOrCreate(['name' => trim($data['merchant'])])->id : null;
-
-                $product = Product::firstOrNew(['sku' => $sku]);
-                $wasExisting = $product->exists;
-
-                $product->fill([
-                    'name' => $name,
-                    'price' => (float) $price,
-                    'offer_price' => $offer,
-                    'category_id' => $categoryId,
-                    'merchant_id' => $merchantId,
-                    'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
-                ]);
-
-                // Optional image column: download from URL and store.
-                if (filled($data['image'] ?? null)) {
-                    if ($stored = $this->fetchImage(trim($data['image']))) {
-                        if ($product->image) {
-                            Storage::disk('public')->delete($product->image);
-                        }
-                        $product->image = $stored;
-                    }
-                }
-
-                $product->save();
-
-                $wasExisting ? $updated++ : $created++;
+        DB::transaction(function () use ($request, $rows, &$created, &$updated, &$skipped) {
+            foreach ($rows as $i => $data) {
+                $imageFile = $request->file("rows.{$i}.image_file");
+                match ($this->importRow($data, $imageFile)) {
+                    'created' => $created++,
+                    'updated' => $updated++,
+                    default => $skipped++,
+                };
             }
         });
-
-        fclose($handle);
 
         return redirect()->route('inventory.products.index')
             ->with('status', "Import complete: {$created} added, {$updated} updated, {$skipped} skipped.");
     }
 
+    /** Create/update a single product from a row of import data. */
+    private function importRow(array $data, ?\Illuminate\Http\UploadedFile $imageFile = null): string
+    {
+        $name = trim((string) ($data['name'] ?? ''));
+        $sku = trim((string) ($data['sku'] ?? ''));
+        $price = $data['price'] ?? null;
+
+        if ($name === '' || $sku === '' || ! is_numeric($price)) {
+            return 'skipped';
+        }
+
+        $offer = $data['offer_price'] ?? null;
+        $offer = is_numeric($offer) && (float) $offer < (float) $price ? (float) $offer : null;
+
+        $categoryId = filled($data['category'] ?? null)
+            ? Category::firstOrCreate(['name' => trim($data['category'])])->id : null;
+        $merchantId = filled($data['merchant'] ?? null)
+            ? Merchant::firstOrCreate(['name' => trim($data['merchant'])])->id : null;
+
+        $product = Product::firstOrNew(['sku' => $sku]);
+        $wasExisting = $product->exists;
+
+        $product->fill([
+            'name' => $name,
+            'price' => (float) $price,
+            'offer_price' => $offer,
+            'category_id' => $categoryId,
+            'merchant_id' => $merchantId,
+            'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+        ]);
+
+        // Uploaded file takes precedence over an image URL.
+        if ($imageFile) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $product->image = $imageFile->store('products', 'public');
+        } elseif (filled($data['image'] ?? null)) {
+            if ($stored = $this->fetchImage(trim($data['image']))) {
+                if ($product->image) {
+                    Storage::disk('public')->delete($product->image);
+                }
+                $product->image = $stored;
+            }
+        }
+
+        $product->save();
+
+        // Opening stock only applies to newly created products.
+        $openingQty = (int) ($data['opening_stock'] ?? 0);
+        if (! $wasExisting && $openingQty > 0) {
+            $warehouseName = filled($data['warehouse'] ?? null) ? trim($data['warehouse']) : 'Main Warehouse';
+            $warehouse = Warehouse::firstOrCreate(['name' => $warehouseName]);
+
+            Stock::adjust($product->id, $warehouse->id, $openingQty);
+            StockAdjustment::create([
+                'product_id' => $product->id,
+                'warehouse_id' => $warehouse->id,
+                'type' => 'add',
+                'quantity' => $openingQty,
+                'reason' => 'Opening stock (import)',
+            ]);
+        }
+
+        return $wasExisting ? 'updated' : 'created';
+    }
+
     /** Download an image URL and store it on the public disk; returns the path or null. */
     private function fetchImage(string $url): ?string
     {
-        if (! preg_match('#^https?://#i', $url)) {
+        if (! preg_match('#^https?://#i', $url) || ! $this->isPublicHost($url)) {
             return null;
         }
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(15)->get($url);
+            $response = \Illuminate\Support\Facades\Http::connectTimeout(5)->timeout(15)
+                ->withOptions(['allow_redirects' => ['max' => 2]])
+                ->get($url);
         } catch (\Throwable $e) {
             return null;
         }
 
         if (! $response->successful()) {
+            return null;
+        }
+
+        $body = $response->body();
+        if (strlen($body) > 3 * 1024 * 1024) { // cap at 3 MB
             return null;
         }
 
@@ -242,9 +315,32 @@ class ProductController extends Controller
         }
 
         $path = 'products/' . \Illuminate\Support\Str::random(40) . '.' . $ext;
-        \Illuminate\Support\Facades\Storage::disk('public')->put($path, $response->body());
+        \Illuminate\Support\Facades\Storage::disk('public')->put($path, $body);
 
         return $path;
+    }
+
+    /** SSRF guard: reject hosts that resolve to private/reserved IP ranges. */
+    private function isPublicHost(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! $host) {
+            return false;
+        }
+
+        // Resolve the host to IPv4 addresses; reject if it can't be resolved.
+        $ips = @gethostbynamel($host);
+        if (empty($ips)) {
+            return false;
+        }
+
+        foreach ($ips as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return false; // private or reserved → block (SSRF)
+            }
+        }
+
+        return true;
     }
 
     private function validateData(Request $request, ?Product $product = null): array

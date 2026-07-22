@@ -28,12 +28,12 @@
                     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Upload a CSV file. Existing SKUs are updated; new ones are created.</p>
 
                     <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
-                        Columns: <code>name, sku, category, merchant, price, offer_price, description, image</code>.
-                        The <code>image</code> column takes a public image URL (jpg/png/webp) that will be downloaded.
+                        Columns: <code>name, sku, category, merchant, price, offer_price, description, image, opening_stock, warehouse</code>.
+                        The <code>image</code> column takes a public image URL (jpg/png/webp). <code>opening_stock</code> is only applied to newly created products.
                         <a href="{{ route('inventory.products.import.sample') }}" class="mt-1 inline-block font-medium text-brand-600 hover:underline">↓ Download demo CSV</a>
                     </div>
 
-                    <form method="POST" action="{{ route('inventory.products.import') }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('inventory.products.import.preview') }}" enctype="multipart/form-data">
                         @csrf
                         <input type="file" name="file" accept=".csv,text/csv" required
                             class="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600 dark:text-gray-400" />
@@ -43,7 +43,7 @@
                             <button type="button" @click="importOpen = false"
                                 class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Cancel</button>
                             <button type="submit"
-                                class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Import</button>
+                                class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Preview</button>
                         </div>
                     </form>
                 </div>

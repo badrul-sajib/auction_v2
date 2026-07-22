@@ -15,21 +15,28 @@ use App\Http\Controllers\Inventory\OrderController;
 use App\Http\Controllers\Inventory\PaymentMethodController;
 use App\Http\Controllers\Inventory\PaymentController;
 use App\Http\Controllers\Inventory\WithdrawalController;
+use App\Http\Controllers\Inventory\AllowedIpController;
 use App\Http\Controllers\PublicOrderController;
-
-// public order pages (tokenized, no auth)
-Route::get('/order/{token}', [PublicOrderController::class, 'show'])->name('order.show');
-Route::post('/order/{token}', [PublicOrderController::class, 'store'])->name('order.store');
 use App\Http\Controllers\Inventory\StockAdjustmentController;
 use App\Http\Controllers\Inventory\StockTransferController;
+
+// public order pages (tokenized, no auth) — restricted by IP whitelist + rate limited
+Route::middleware(['ip.whitelist', 'throttle:30,1'])->group(function () {
+    Route::get('/order/{token}', [PublicOrderController::class, 'show'])->name('order.show');
+    Route::post('/order/{token}', [PublicOrderController::class, 'store'])->name('order.store');
+});
 
 // inventory
 Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(function () {
     Route::get('products/import/sample', [ProductController::class, 'sampleImport'])->name('products.import.sample');
+    Route::post('products/import/preview', [ProductController::class, 'previewImport'])->name('products.import.preview');
     Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
     Route::resource('products', ProductController::class)->except('show');
     Route::resource('categories', CategoryController::class)->except('show');
     Route::resource('warehouses', WarehouseController::class)->except('show');
+    Route::get('merchants/import/sample', [MerchantController::class, 'sampleImport'])->name('merchants.import.sample');
+    Route::post('merchants/import/preview', [MerchantController::class, 'previewImport'])->name('merchants.import.preview');
+    Route::post('merchants/import', [MerchantController::class, 'import'])->name('merchants.import');
     Route::resource('merchants', MerchantController::class)->except('show');
 
     Route::get('stock', [StockController::class, 'index'])->name('stock.index');
@@ -56,6 +63,13 @@ Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(functi
     Route::get('withdrawals/{withdrawal}/invoice', [WithdrawalController::class, 'invoice'])->name('withdrawals.invoice');
     Route::resource('payment-methods', PaymentMethodController::class)->except('show');
 
+    Route::get('ip-whitelist', [AllowedIpController::class, 'index'])->name('allowed-ips.index');
+    Route::patch('ip-whitelist/feature/toggle', [AllowedIpController::class, 'toggleFeature'])->name('allowed-ips.feature-toggle');
+    Route::post('ip-whitelist', [AllowedIpController::class, 'store'])->name('allowed-ips.store');
+    Route::patch('ip-whitelist/{allowedIp}', [AllowedIpController::class, 'update'])->name('allowed-ips.update');
+    Route::patch('ip-whitelist/{allowedIp}/toggle', [AllowedIpController::class, 'toggle'])->name('allowed-ips.toggle');
+    Route::delete('ip-whitelist/{allowedIp}', [AllowedIpController::class, 'destroy'])->name('allowed-ips.destroy');
+
     Route::get('adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');
     Route::get('adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
     Route::post('adjustments', [StockAdjustmentController::class, 'store'])->name('adjustments.store');
@@ -68,11 +82,6 @@ Route::middleware('auth')->prefix('inventory')->name('inventory.')->group(functi
 // dashboard pages
 Route::get('/', [DashboardController::class, 'index'])->middleware('auth')->name('dashboard');
 
-// calender pages
-Route::get('/calendar', function () {
-    return view('pages.calender', ['title' => 'Calendar']);
-})->name('calendar');
-
 // profile pages
 Route::get('/profile', function () {
     return view('pages.profile', ['title' => 'Profile']);
@@ -80,73 +89,13 @@ Route::get('/profile', function () {
 
 Route::put('/profile', [ProfileController::class, 'update'])->middleware('auth')->name('profile.update');
 
-// form pages
-Route::get('/form-elements', function () {
-    return view('pages.form.form-elements', ['title' => 'Form Elements']);
-})->name('form-elements');
-
-// tables pages
-Route::get('/basic-tables', function () {
-    return view('pages.tables.basic-tables', ['title' => 'Basic Tables']);
-})->name('basic-tables');
-
-// pages
-
-Route::get('/blank', function () {
-    return view('pages.blank', ['title' => 'Blank']);
-})->name('blank');
-
-// error pages
-Route::get('/error-404', function () {
-    return view('pages.errors.error-404', ['title' => 'Error 404']);
-})->name('error-404');
-
-// chart pages
-Route::get('/line-chart', function () {
-    return view('pages.chart.line-chart', ['title' => 'Line Chart']);
-})->name('line-chart');
-
-Route::get('/bar-chart', function () {
-    return view('pages.chart.bar-chart', ['title' => 'Bar Chart']);
-})->name('bar-chart');
-
-
 // authentication pages
 Route::get('/signin', function () {
     return view('pages.auth.signin', ['title' => 'Sign In']);
-})->name('signin');
+})->middleware('guest')->name('signin');
 
-Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->middleware(['guest', 'throttle:6,1'])->name('login');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
-Route::get('/signup', function () {
-    return view('pages.auth.signup', ['title' => 'Sign Up']);
-})->name('signup');
-
-// ui elements pages
-Route::get('/alerts', function () {
-    return view('pages.ui-elements.alerts', ['title' => 'Alerts']);
-})->name('alerts');
-
-Route::get('/avatars', function () {
-    return view('pages.ui-elements.avatars', ['title' => 'Avatars']);
-})->name('avatars');
-
-Route::get('/badge', function () {
-    return view('pages.ui-elements.badges', ['title' => 'Badges']);
-})->name('badges');
-
-Route::get('/buttons', function () {
-    return view('pages.ui-elements.buttons', ['title' => 'Buttons']);
-})->name('buttons');
-
-Route::get('/image', function () {
-    return view('pages.ui-elements.images', ['title' => 'Images']);
-})->name('images');
-
-Route::get('/videos', function () {
-    return view('pages.ui-elements.videos', ['title' => 'Videos']);
-})->name('videos');
 
 
 

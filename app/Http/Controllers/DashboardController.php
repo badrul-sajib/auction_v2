@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Withdrawal;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
@@ -55,7 +56,7 @@ class DashboardController extends Controller
             'targetPercent' => $targetPercent,
             'monthlySales' => $monthlySales,
             'recentOrders' => Order::with('product')->latest()->take(6)->get(),
-            'currentBalance' => \App\Models\Withdrawal::availableBalance(),
+            'currentBalance' => Withdrawal::availableBalance(),
         ]);
     }
 

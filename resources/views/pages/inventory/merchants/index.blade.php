@@ -5,12 +5,48 @@
     @include('pages.inventory.partials.flash')
 
     <div class="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800" x-data="{ importOpen: false }">
             <h3 class="text-base font-semibold text-gray-800 dark:text-white/90">All Merchants</h3>
-            <a href="{{ route('inventory.merchants.create') }}"
-                class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
-                + New Merchant
-            </a>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="importOpen = true"
+                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
+                    Import
+                </button>
+                <a href="{{ route('inventory.merchants.create') }}"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
+                    + New Merchant
+                </a>
+            </div>
+
+            <!-- Import modal -->
+            <div x-show="importOpen" x-cloak @keydown.escape.window="importOpen = false"
+                class="fixed inset-0 z-99999 flex items-center justify-center bg-gray-900/50 p-4">
+                <div @click.outside="importOpen = false"
+                    class="w-full max-w-md rounded-2xl bg-white p-6 text-left dark:bg-gray-900">
+                    <h4 class="mb-1 text-lg font-semibold text-gray-800 dark:text-white/90">Bulk Import Merchants</h4>
+                    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Upload a CSV file. Existing merchants (matched by name) are updated; new ones are created.</p>
+
+                    <div class="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
+                        Columns: <code>name, email, phone, address</code>.
+                        <a href="{{ route('inventory.merchants.import.sample') }}" class="mt-1 inline-block font-medium text-brand-600 hover:underline">↓ Download demo CSV</a>
+                    </div>
+
+                    <form method="POST" action="{{ route('inventory.merchants.import.preview') }}" enctype="multipart/form-data">
+                        @csrf
+                        <input type="file" name="file" accept=".csv,text/csv" required
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-500 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-white hover:file:bg-brand-600 dark:text-gray-400" />
+                        @error('file')<p class="mt-1.5 text-sm text-error-500">{{ $message }}</p>@enderror
+
+                        <div class="mt-5 flex justify-end gap-3">
+                            <button type="button" @click="importOpen = false"
+                                class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Cancel</button>
+                            <button type="submit"
+                                class="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600">Preview</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <div class="overflow-x-auto">

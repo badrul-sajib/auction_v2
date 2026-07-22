@@ -6,15 +6,20 @@
 
     @php $hasFilters = collect($filters)->filter(fn ($v) => filled($v))->isNotEmpty(); @endphp
 
-    <form method="GET" action="{{ route('inventory.orders.index') }}"
-        class="mb-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div class="mb-4">
+    <form method="GET" action="{{ route('inventory.orders.index') }}" class="mb-6 space-y-4">
+        <!-- Search card -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
             <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Search</label>
-            <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
-                placeholder="Order ID or phone number…"
-                class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+            <div class="flex gap-2">
+                <input type="text" name="search" value="{{ $filters['search'] ?? '' }}"
+                    placeholder="Order ID or phone number…"
+                    class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                <button type="submit" class="shrink-0 rounded-lg bg-brand-500 px-5 text-sm font-medium text-white hover:bg-brand-600">Search</button>
+            </div>
         </div>
 
+        <!-- Filters card -->
+        <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div>
                 <label class="mb-1.5 block text-xs font-medium text-gray-500 dark:text-gray-400">Item</label>
@@ -63,6 +68,7 @@
                 <a href="{{ route('inventory.orders.index') }}"
                     class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">Clear</a>
             @endif
+        </div>
         </div>
     </form>
 
