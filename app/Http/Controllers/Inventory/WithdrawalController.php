@@ -14,8 +14,7 @@ class WithdrawalController extends Controller
     {
         $withdrawals = Withdrawal::latest()->paginate(15);
         $balance = Withdrawal::availableBalance();
-        $pendingOrdersCount = Order::whereIn('status', Withdrawal::PAID_STATUSES)
-            ->whereNull('withdrawal_id')->count();
+        $pendingOrdersCount = Order::paid()->whereNull('withdrawal_id')->count();
 
         return view('pages.inventory.withdrawals.index', compact('withdrawals', 'balance', 'pendingOrdersCount'));
     }
@@ -27,7 +26,7 @@ class WithdrawalController extends Controller
         ]);
 
         $withdrawal = DB::transaction(function () use ($request) {
-            $orders = Order::whereIn('status', Withdrawal::PAID_STATUSES)
+            $orders = Order::paid()
                 ->whereNull('withdrawal_id')
                 ->lockForUpdate()
                 ->get();

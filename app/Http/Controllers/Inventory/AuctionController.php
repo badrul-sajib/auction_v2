@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Inventory;
 
 use App\Http\Controllers\Controller;
 use App\Models\Auction;
+use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -11,9 +12,11 @@ class AuctionController extends Controller
 {
     public function index(Product $product)
     {
-        $auctions = $product->load('merchant')
-            ->auctions()
-            ->withCount(['orders'])
+        // Precompute sold units and revenue per auction to avoid N+1 queries in the list.
+        $auctions = $product->auctions()
+            ->withCount('orders')
+            ->withSum(['orders as sold_quantity' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'quantity')
+            ->withSum(['orders as revenue_sum' => fn ($q) => $q->whereIn('status', Order::PAID_STATUSES)], 'total')
             ->latest()
             ->paginate(15);
 

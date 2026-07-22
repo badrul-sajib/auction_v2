@@ -25,12 +25,11 @@ class DashboardController extends Controller
         $customersLastMonth = Order::whereBetween('created_at', [$startOfLastMonth, $endOfLastMonth])->distinct('customer_phone')->count('customer_phone');
 
         // Revenue (confirmed or delivered orders)
-        $paidStatuses = ['confirmed', 'delivered'];
-        $revenueThisMonth = (float) Order::whereIn('status', $paidStatuses)->where('created_at', '>=', $startOfMonth)->sum('total');
-        $todayRevenue = (float) Order::whereIn('status', $paidStatuses)->whereDate('created_at', $now->toDateString())->sum('total');
+        $revenueThisMonth = (float) Order::paid()->where('created_at', '>=', $startOfMonth)->sum('total');
+        $todayRevenue = (float) Order::paid()->whereDate('created_at', $now->toDateString())->sum('total');
 
         // Monthly sales for the current year (revenue per month)
-        $monthlyTotals = Order::whereIn('status', $paidStatuses)
+        $monthlyTotals = Order::paid()
             ->whereYear('created_at', $now->year)
             ->selectRaw('MONTH(created_at) as m, SUM(total) as t')
             ->groupBy('m')

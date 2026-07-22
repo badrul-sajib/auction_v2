@@ -53,7 +53,7 @@ class Auction extends Model
     /** Revenue for this auction (confirmed or delivered orders). */
     public function revenue(): float
     {
-        return (float) $this->orders()->whereIn('status', ['confirmed', 'delivered'])->sum('total');
+        return (float) $this->orders()->paid()->sum('total');
     }
 
     public function isExpired(): bool

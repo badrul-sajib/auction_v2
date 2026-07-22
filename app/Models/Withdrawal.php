@@ -18,15 +18,10 @@ class Withdrawal extends Model
         return $this->hasMany(Order::class);
     }
 
-    /** Statuses that count as collectable revenue. */
-    public const PAID_STATUSES = ['confirmed', 'delivered'];
-
     /** Available balance = paid orders not yet withdrawn. */
     public static function availableBalance(): float
     {
-        return (float) Order::whereIn('status', self::PAID_STATUSES)
-            ->whereNull('withdrawal_id')
-            ->sum('total');
+        return (float) Order::paid()->whereNull('withdrawal_id')->sum('total');
     }
 
     public static function nextInvoiceNumber(): string

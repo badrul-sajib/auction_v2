@@ -50,7 +50,10 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse ($auctions as $auction)
-                        @php $remaining = $auction->remainingStock(); @endphp
+                        @php
+                            $sold = (int) ($auction->sold_quantity ?? 0);
+                            $remaining = $auction->stock === null ? null : max(0, $auction->stock - $sold);
+                        @endphp
                         <tr class="text-gray-700 dark:text-gray-300">
                             <td class="px-5 py-4">
                                 <a href="{{ route('inventory.auctions.show', $auction) }}" class="font-medium text-brand-600 hover:underline">
@@ -59,12 +62,16 @@
                                 <span class="block text-xs text-gray-400">{{ \Illuminate\Support\Str::limit($auction->token, 12) }}</span>
                             </td>
                             <td class="px-5 py-4 text-right">{{ $auction->stock ?? '∞' }}</td>
-                            <td class="px-5 py-4 text-right">{{ $auction->soldQuantity() }}</td>
+                            <td class="px-5 py-4 text-right">{{ $sold }}</td>
                             <td class="px-5 py-4 text-right">{{ $remaining === null ? '∞' : $remaining }}</td>
                             <td class="px-5 py-4 text-right">{{ $auction->orders_count }}</td>
-                            <td class="px-5 py-4 text-right font-medium">{{ number_format($auction->revenue(), 2) }}</td>
+                            <td class="px-5 py-4 text-right font-medium">{{ number_format($auction->revenue_sum ?? 0, 2) }}</td>
                             <td class="px-5 py-4">
-                                @php $label = $auction->statusLabel(); @endphp
+                                @php
+                                    $label = ! $auction->is_active ? 'Inactive'
+                                        : ($auction->isExpired() ? 'Expired'
+                                        : (($remaining !== null && $remaining <= 0) ? 'Sold out' : 'Active'));
+                                @endphp
                                 <span @class([
                                     'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium',
                                     'bg-success-50 text-success-600 dark:bg-success-500/15' => $label === 'Active',

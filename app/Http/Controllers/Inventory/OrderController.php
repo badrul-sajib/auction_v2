@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -53,7 +54,7 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status' => ['required', 'in:pending,confirmed,cancelled,delivered'],
+            'status' => ['required', Rule::in(Order::STATUSES)],
         ]);
 
         $oldStatus = $order->status;

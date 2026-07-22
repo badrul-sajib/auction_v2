@@ -7,12 +7,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Order extends Model
 {
+    /** All valid order statuses. */
+    public const STATUSES = ['pending', 'confirmed', 'delivered', 'cancelled'];
+
+    /** Statuses that count as collectable revenue / a completed sale. */
+    public const PAID_STATUSES = ['confirmed', 'delivered'];
+
     protected $fillable = [
         'order_link_id', 'product_id', 'customer_name', 'customer_phone',
         'customer_address', 'quantity', 'unit_price', 'total', 'status',
         'payment_method_id', 'transaction_number', 'agent_type', 'agent_id',
         'withdrawal_id',
     ];
+
+    /** Scope: paid orders (confirmed or delivered). */
+    public function scopePaid($query)
+    {
+        return $query->whereIn('status', self::PAID_STATUSES);
+    }
 
     protected $casts = [
         'unit_price' => 'decimal:2',

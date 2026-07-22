@@ -13,7 +13,7 @@ class PaymentController extends Controller
 
         $payments = (clone $query)->latest()->paginate(15);
 
-        $totalCollected = (clone $query)->whereIn('status', ['confirmed', 'delivered'])->sum('total');
+        $totalCollected = (clone $query)->paid()->sum('total');
         $totalPending = (clone $query)->where('status', 'pending')->sum('total');
 
         return view('pages.inventory.payments.index', compact('payments', 'totalCollected', 'totalPending'));
